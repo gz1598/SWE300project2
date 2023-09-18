@@ -19,6 +19,7 @@ public class SensorReadingsParser
     private static final Logger logger =
             Logger.getLogger(SensorReadingsParser.class.getName());
     private final Scanner dataFile;
+    private int[][] sensors = { { 0, 0 }, { 0, 0 }, { 0, 0 } };
 
 
     /**
@@ -39,6 +40,20 @@ public class SensorReadingsParser
 
         dataFile = new Scanner(new File(fileTitle));
 
+        int lineCount = 0;
+        String line;
+        String parts[];
+        String delimiter = " ";
+        while(lineCount < NUMBER_OF_SENSORS) {
+            line = dataFile.nextLine();
+            parts = line.split(delimiter);
+            for (int index = 0; index < 2; index++)
+            {
+                sensors[lineCount][index] = Integer.parseInt(parts[index]);
+            }
+            lineCount++;
+        }
+
         // At this point, your logger has been set up and your datafile is ready to read
     }
 
@@ -50,7 +65,58 @@ public class SensorReadingsParser
      */
     public ReadingSet getNext() throws NoMoreData
     {
-        return null;
+        char timeSlotId = ' ';
+        int data[] = {0, 0, 0};
+        String line;
+        String parts[];
+        String delimiter = " ";
+
+        // check for eof
+        if (!dataFile.hasNextLine())
+        {
+            throw new NoMoreData();
+        } else {
+            line = dataFile.nextLine();
+            parts = line.split(delimiter);
+            timeSlotId = parts[0].charAt(0);
+
+            // check for either missing data or too much data
+            if(parts.length < 4) {
+                logger.severe("Record is missing data");
+                close();
+                getNext();
+            } else if (parts.length >= 5) {
+                logger.severe("Record has too much data");
+                close();
+                getNext();
+            }
+
+            // check for bad time slot id
+
+            // read in data and check for out of range
+            for (int index = 0; index < NUMBER_OF_SENSORS; index++)
+            {
+                data[index] = Integer.parseInt(parts[index + 1]);
+                if ((data[index] > sensors[index][1]) && (data[index] < (sensors[index][1] * 1.5))) {
+                    data[index] = sensors[index][1];
+                    logger.info("Reading value is too high.  Setting to max value");
+                } else if (data[index] < sensors[index][0])                 {
+                    data[index] = sensors[index][0];
+                    logger.info("Reading value is too low.  Setting to min value");
+                }
+                while ((data[index] >= (sensors[index][1] * 1.5)) && dataFile.hasNext()) {
+                    data[index] = sensors[index][1];
+                    logger.severe("Reading value is at least 150% of max value.  Setting to max value");
+                    line = dataFile.nextLine();
+                    timeSlotId = line.charAt(0);
+                    parts = line.split(" ");
+                }
+            }
+        }
+
+        // return reading set with data and time slot id
+        ReadingSet readingSet = new ReadingSet(timeSlotId, data);
+        return readingSet;
     }
 
     /**
@@ -61,7 +127,7 @@ public class SensorReadingsParser
      */
     public int getMin(int index)
     {
-        return 0;
+        return sensors[index][0];
     }
 
     /**
@@ -72,7 +138,7 @@ public class SensorReadingsParser
      */
     public int getMax(int index)
     {
-        return 0;
+        return sensors[index][1];
     }
 
     /**
@@ -82,8 +148,8 @@ public class SensorReadingsParser
     {
         LogManager.getLogManager().reset();
     }
-	
-	static class NoMoreData extends Exception
+
+    static class NoMoreData extends Exception
     {
 
     }
