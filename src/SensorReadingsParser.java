@@ -74,23 +74,20 @@ public class SensorReadingsParser
         String line;
         String parts[];
         String delimiter = " ";
-        boolean isMissingLine = false;
 
         // check for eof
         if (!dataFile.hasNextLine()) {
             throw new NoMoreData();
-        } else if (isMissingLine) {
-            //have stored data from
         } else {
             line = dataFile.nextLine();
             parts = line.split(delimiter);
             timeSlotId = parts[0].charAt(0);
             boolean isValidLength = true;
-            boolean isValidTimeID = true;
+            boolean isValidTimeID = timeIDCheck(parts);
             boolean isSensorDataValid = false;
 
             if ((isValidLength = dataAmountCheck(parts.length)) && (isSensorDataValid = checkDigits(parts))
-                    && (isValidTimeID = timeIDCheck(parts))) {
+                    && isValidTimeID) {
                     // read in data and check for out of range
                     for (int index = 0; index < NUMBER_OF_SENSORS; index++) {
                         data[index] = Integer.parseInt(parts[index + 1]);
@@ -105,14 +102,10 @@ public class SensorReadingsParser
 
                 previousSensorData = data;
                 prevTimeSlotId = timeSlotId;
-                //determine the next expected Time Slot ID
-                expectedTimeSlotId = calcExpectedTimeSlotId(timeSlotId);
-            } else if (!isValidTimeID) {
-                // if time slot id is invalid, set data to previous data
-                data = previousSensorData;
-                timeSlotId = prevTimeSlotId;
             }
         }
+        //determine the next expected Time Slot ID
+        expectedTimeSlotId = calcExpectedTimeSlotId(timeSlotId);
         // return reading set with data and time slot id
         ReadingSet readingSet = new ReadingSet(timeSlotId, data);
         return readingSet;
@@ -162,7 +155,7 @@ public class SensorReadingsParser
         } else if (length > 4) {
             logger.severe("Record has too much data");
             close();
-           // getNext();
+            getNext();
             return false;
         }
         return true;
@@ -173,24 +166,29 @@ public class SensorReadingsParser
             isFirstReading = false;
         } else if (timeSlotId < 'A' || timeSlotId > 'O'){
             timeSlotId = expectedTimeSlotId;
+            System.out.println("Time Slot ID is out of range");
             logger.severe("Time Slot ID is out of range, replaced with expected ID");
+            getNext();
+            return false;
+        } else if (parts[0].length() > 1) {
+            timeSlotId = expectedTimeSlotId;
+            System.out.println("Time Slot ID is too long");
+            logger.severe("Time Slot ID is too long");
+            getNext();
             return false;
         } else if (timeSlotId != expectedTimeSlotId) {
             int distanceOff = calcNumOfPositionsOff(timeSlotId, expectedTimeSlotId);
             //Check if one line was missed.
-            if (distanceOff == 1) {
+            if (distanceOff == 1 && prevTimeSlotId != 'O') {
                 //Incorrect TimeSlotID is set to the expected ID
                 timeSlotId = expectedTimeSlotId;
                 data = previousSensorData;
                 logger.info("Missing reading. Returning all values of the last reading with expected ID.");
+                getNext();
                 return false;
             } else if (distanceOff > 1) {
                 logger.severe("Time Slot ID is off by more than 1 position. Going forward as if entry is correct.");
             }
-        } else if (parts[0].length() > 1) {
-            timeSlotId = expectedTimeSlotId;
-            logger.severe("Time Slot ID is too long");
-            return false;
         }
         return true;
     }
