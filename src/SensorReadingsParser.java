@@ -13,10 +13,10 @@ import java.util.logging.Logger;
  */
 public class SensorReadingsParser
 {
-    static final int NUMBER_OF_SENSORS = 3;
-    static final char FIRST_TIME_SLOT_ID = 'A';
-    static final int READINGS_PER_GROUP = 15;
-    private static final Logger logger =
+    protected static final int NUMBER_OF_SENSORS = 3;
+    protected static final char FIRST_TIME_SLOT_ID = 'A';
+    protected static final int READINGS_PER_GROUP = 15;
+    private static final Logger LOGGER =
             Logger.getLogger(SensorReadingsParser.class.getName());
     private final Scanner dataFile;
 
@@ -47,18 +47,20 @@ public class SensorReadingsParser
         FileHandler fileHandler = new FileHandler(fileTitle + ".log");
 
         //Assigning handlers to LOGGER object
-        logger.addHandler(fileHandler);
+        LOGGER.addHandler(fileHandler);
 
         fileHandler.setLevel(Level.INFO);
-        logger.setLevel(Level.ALL);
+        LOGGER.setLevel(Level.ALL);
 
         dataFile = new Scanner(new File(fileTitle));
 
         int lineCount = 0;
-        while (lineCount < NUMBER_OF_SENSORS) {
-            String lineInFile = dataFile.nextLine();
+        while (lineCount < NUMBER_OF_SENSORS)
+        {
+            lineInFile = dataFile.nextLine();
             String[] sensorInput = lineInFile.split(DELIMITING_CHAR);
-            for (int index = 0; index < 2; index++) {
+            for (int index = 0; index < 2; index++)
+            {
                 sensorReadingRange[lineCount][index] = Integer.parseInt(sensorInput[index]);
             }
             lineCount++;
@@ -71,14 +73,17 @@ public class SensorReadingsParser
      * Get the next valid entry from the file
      *
      * @return the ReadingSet for the next valid entry
+     * @throws NoMoreData Throws exception if reached end of file.
      */
-    public ReadingSet getNext() throws NoMoreData {
+    public ReadingSet getNext() throws NoMoreData
+    {
         // check for eof if previous line was not skipped
         checkForNextLine();
         String[] rawSensorData = lineInFile.split(DELIMITING_CHAR);
         timeSlotId = rawSensorData[TIME_SLOT_ID_POSITION].charAt(0);
         if (isDataAmountValid(rawSensorData.length) && (!doesSensorReadingContainChar(rawSensorData))
-                && isTimeSlotIDValid(rawSensorData[TIME_SLOT_ID_POSITION])) {
+                && isTimeSlotIDValid(rawSensorData[TIME_SLOT_ID_POSITION]))
+        {
             // read in data and check for out of range
             readInSensorData(rawSensorData);
             // check if data is matching
@@ -96,13 +101,18 @@ public class SensorReadingsParser
      * Checks if there is another line to be read.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private void checkForNextLine() throws NoMoreData {
-        if (!isMissingOnePreviousReading) {
-            if(!dataFile.hasNextLine()) {
+    private void checkForNextLine() throws NoMoreData
+    {
+        if (!isMissingOnePreviousReading)
+        {
+            if(!dataFile.hasNextLine())
+            {
                 throw new NoMoreData();
             }
             lineInFile = dataFile.nextLine();
-        } else {
+        }
+        else
+        {
             isMissingOnePreviousReading = false;
         }
     }
@@ -110,12 +120,15 @@ public class SensorReadingsParser
      * Checks the bounds of the sensor readings and stores them for future use.
      * @param lineOfData the line of data to be read from.
      */
-    private void readInSensorData(String[] lineOfData) {
-        for (int index = 0; index < NUMBER_OF_SENSORS; index++) {
+    private void readInSensorData(String[] lineOfData)
+    {
+        for (int index = 0; index < NUMBER_OF_SENSORS; index++)
+        {
             currentSensorData[index] = Integer.parseInt(lineOfData[index + 1]);
             checkSensorReadingTooLow(index);
             checkSensorReadingTooHigh(index);
-            if (isSensorReadingExceedingMaxTolerance(index)) {
+            if (isSensorReadingExceedingMaxTolerance(index))
+            {
                 lineInFile = dataFile.nextLine();
                 timeSlotId = lineInFile.charAt(0);
                 lineOfData = lineInFile.split(" ");
@@ -127,11 +140,13 @@ public class SensorReadingsParser
      * Checks if a sensor reading is below the minimum allowed.
      * @param sensorIndex The index of the desired sensor.
      */
-    private void checkSensorReadingTooLow(int sensorIndex) {
+    private void checkSensorReadingTooLow(int sensorIndex)
+    {
         int min = getMin(sensorIndex);
-        if (currentSensorData[sensorIndex] < min) {
+        if (currentSensorData[sensorIndex] < min)
+        {
             currentSensorData[sensorIndex] = min;
-            logger.info("Reading value is too low.  Setting to min value");
+            LOGGER.info("Reading value is too low.  Setting to min value");
         }
     }
 
@@ -140,12 +155,14 @@ public class SensorReadingsParser
      * 150% of the max.
      * @param sensorIndex The index of the desired sensor.
      */
-    private void checkSensorReadingTooHigh(int sensorIndex) {
+    private void checkSensorReadingTooHigh(int sensorIndex)
+    {
         int max = getMax(sensorIndex);
         double maxWithTolerance = max * DATA_MAX_PERCENT_TOLERANCE;
-        if (max < currentSensorData[sensorIndex] && currentSensorData[sensorIndex] < maxWithTolerance) {
+        if (max < currentSensorData[sensorIndex] && currentSensorData[sensorIndex] < maxWithTolerance)
+        {
             currentSensorData[sensorIndex] = max;
-            logger.info("Reading value is too high.  Setting to max value");
+            LOGGER.info("Reading value is too high.  Setting to max value");
         }
     }
 
@@ -155,12 +172,14 @@ public class SensorReadingsParser
      * @return True if the sensor reading exceeds the max given the 150% tolerance,
      * false if it does not.
      */
-    private boolean isSensorReadingExceedingMaxTolerance(int sensorIndex) {
+    private boolean isSensorReadingExceedingMaxTolerance(int sensorIndex)
+    {
         int max = getMax(sensorIndex);
         double maxWithTolerance = max * DATA_MAX_PERCENT_TOLERANCE;
-        if (currentSensorData[sensorIndex] >= maxWithTolerance && dataFile.hasNext()) {
+        if (currentSensorData[sensorIndex] >= maxWithTolerance && dataFile.hasNext())
+        {
             currentSensorData[sensorIndex] = max;
-            logger.severe("Reading value is at least 150% of max value.  Setting to max value");
+            LOGGER.severe("Reading value is at least 150% of max value.  Setting to max value");
             return true;
         }
         return false;
@@ -172,7 +191,8 @@ public class SensorReadingsParser
      * @param index the offset of the sensor in the data section of each record
      * @return the min legal value
      */
-    protected int getMin(int index) {
+    protected int getMin(int index)
+    {
         return sensorReadingRange[index][0];
     }
 
@@ -182,14 +202,16 @@ public class SensorReadingsParser
      * @param index The offset of the sensor in the data section of each record
      * @return the max legal value
      */
-    protected int getMax(int index) {
+    protected int getMax(int index)
+    {
         return sensorReadingRange[index][1];
     }
 
     /**
      * Close this reader.  Will close the log file
      */
-    protected void close() {
+    protected void close()
+    {
         LogManager.getLogManager().reset();
     }
 
@@ -200,12 +222,15 @@ public class SensorReadingsParser
      * @return True if the data amount is valid, false if not.
      * @throws NoMoreData Throws exception if there is no more data.
      */
-    private boolean isDataAmountValid(int dataLength) throws NoMoreData {
-        if (dataLength < NUM_DATA_ENTRIES_EXPECTED) {
+    private boolean isDataAmountValid(int dataLength) throws NoMoreData
+    {
+        if (dataLength < NUM_DATA_ENTRIES_EXPECTED)
+        {
             logRecordMissingData();
             return false;
         }
-        if (dataLength > NUM_DATA_ENTRIES_EXPECTED) {
+        if (dataLength > NUM_DATA_ENTRIES_EXPECTED)
+        {
             logRecordTooMuchData();
             return false;
         }
@@ -216,8 +241,9 @@ public class SensorReadingsParser
      * Sends message to logger that there is fewer data than expected.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private void logRecordMissingData() throws NoMoreData {
-        logger.severe("Record is missing data");
+    private void logRecordMissingData() throws NoMoreData
+    {
+        LOGGER.severe("Record is missing data");
         close();
         getNext();
     }
@@ -226,8 +252,9 @@ public class SensorReadingsParser
      * Sends message to logger that there is more data than expected.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private void logRecordTooMuchData() throws NoMoreData {
-        logger.severe("Record has too much data");
+    private void logRecordTooMuchData() throws NoMoreData
+    {
+        LOGGER.severe("Record has too much data");
         close();
         getNext();
     }
@@ -238,10 +265,12 @@ public class SensorReadingsParser
      * @return True if the time slot ID is valid, false if not.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private boolean isTimeSlotIDValid(String readTimeSlotID) throws NoMoreData {
+    private boolean isTimeSlotIDValid(String readTimeSlotID) throws NoMoreData
+    {
         int timeSlotIDLength = readTimeSlotID.length();
         if (!isTimeSlotIDInRange() || !isTimeSlotIDValidLength(timeSlotIDLength)
-                || hasMissedOneTimeSlotID()) {
+                || hasMissedOneTimeSlotID())
+        {
             return false;
         }
         checkMissingMultipleTimeSlotID();
@@ -251,9 +280,12 @@ public class SensorReadingsParser
     /**
      * Checks if the current time slot ID is in the valid range.
      * @return True if the time slot ID is in the valid range, false if not.
+     * @throws NoMoreData Throws exception if reached end of file.
      */
-    private boolean isTimeSlotIDInRange() throws NoMoreData {
-        if (TIME_SLOT_ID_MIN <= timeSlotId && timeSlotId <= TIME_SLOT_ID_MAX) {
+    private boolean isTimeSlotIDInRange() throws NoMoreData
+    {
+        if (TIME_SLOT_ID_MIN <= timeSlotId && timeSlotId <= TIME_SLOT_ID_MAX)
+        {
             return true;
         }
         logTimeSlotIDOutOfRange();
@@ -265,8 +297,9 @@ public class SensorReadingsParser
      * the valid range.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private void logTimeSlotIDOutOfRange() throws NoMoreData {
-        logger.severe("Time Slot ID is out of range, replaced with expected ID");
+    private void logTimeSlotIDOutOfRange() throws NoMoreData
+    {
+        LOGGER.severe("Time Slot ID is out of range, replaced with expected ID");
         getNext();
     }
 
@@ -274,9 +307,12 @@ public class SensorReadingsParser
      * Checks if the length of a time slot ID is valid
      * @param timeSlotIDLength The length of the time slot ID
      * @return True if the time slot ID length is valid, false if not.
+     * @throws NoMoreData Throws exception if reached end of file.
      */
-    private boolean isTimeSlotIDValidLength(int timeSlotIDLength) throws NoMoreData {
-        if (timeSlotIDLength == TIME_SLOT_ID_LENGTH_EXPECTED) {
+    private boolean isTimeSlotIDValidLength(int timeSlotIDLength) throws NoMoreData
+    {
+        if (timeSlotIDLength == TIME_SLOT_ID_LENGTH_EXPECTED)
+        {
             return true;
         }
         logTimeSlotIDInvalidLength();
@@ -287,8 +323,9 @@ public class SensorReadingsParser
      * Sends a message to the logger that the time slot ID length is invalid.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private void logTimeSlotIDInvalidLength() throws NoMoreData{
-        logger.severe("Time Slot ID is too long");
+    private void logTimeSlotIDInvalidLength() throws NoMoreData
+    {
+        LOGGER.severe("Time Slot ID is too long");
         getNext();
     }
 
@@ -297,8 +334,10 @@ public class SensorReadingsParser
      * @param currId The current time slot ID.
      * @return The next expected time slot ID.
      */
-    private char calcExpectedTimeSlotId(char currId) {
-        if (currId == TIME_SLOT_ID_MAX) {
+    private char calcExpectedTimeSlotId(char currId)
+    {
+        if (currId == TIME_SLOT_ID_MAX)
+        {
             return TIME_SLOT_ID_MIN;
         }
         currId++;
@@ -310,17 +349,19 @@ public class SensorReadingsParser
      * @return True if one time slot ID was skipped,
      * false if not.
      */
-    private boolean hasMissedOneTimeSlotID() {
+    private boolean hasMissedOneTimeSlotID()
+    {
         int distanceOff = calcNumOfPositionsOff(timeSlotId, expectedTimeSlotId);
         //Check if one line was missed.
-        if (distanceOff == 1) {
+        if (distanceOff == 1)
+        {
             isMissingOnePreviousReading = true;
             //Replace incorrect time slot ID with correct time slot ID
             timeSlotId = expectedTimeSlotId;
             //Use last valid sensor reading data
             currentSensorData = previousSensorData;
-            logger.info("Missing reading. Returning all values of the " +
-                    "last reading with expected ID.");
+            LOGGER.info("Missing reading. Returning all values of the "
+                    + "last reading with expected ID.");
             return true;
         }
         return false;
@@ -329,11 +370,13 @@ public class SensorReadingsParser
     /**
      * Checks if reading skipped over more than one time slot IDs.
      */
-    private void checkMissingMultipleTimeSlotID() {
+    private void checkMissingMultipleTimeSlotID()
+    {
         int distanceOff = calcNumOfPositionsOff(timeSlotId, expectedTimeSlotId);
-        if (distanceOff > 1) {
-            logger.severe("Time Slot ID is off by more than 1 position. " +
-                    "Going forward as if entry is correct.");
+        if (distanceOff > 1)
+        {
+            LOGGER.severe("Time Slot ID is off by more than 1 position. "
+                    + "Going forward as if entry is correct.");
         }
     }
 
@@ -347,7 +390,8 @@ public class SensorReadingsParser
      * @return The number of positions off the current time slot ID is
      * from the expected time slot ID.
      */
-    public int calcNumOfPositionsOff(int asciiOfCurrId, int asciiOfExpectedValue) {
+    public int calcNumOfPositionsOff(int asciiOfCurrId, int asciiOfExpectedValue)
+    {
         return asciiOfCurrId - asciiOfExpectedValue;
     }
 
@@ -358,14 +402,18 @@ public class SensorReadingsParser
      * false if any sensor readings contain a character.
      * @throws NoMoreData Throws exception if reached end of file.
      */
-    private boolean doesSensorReadingContainChar(String[] lineOfData) throws NoMoreData {
-        for (int sensorIndex = 0; sensorIndex < NUMBER_OF_SENSORS; sensorIndex++) {
+    private boolean doesSensorReadingContainChar(String[] lineOfData) throws NoMoreData
+    {
+        for (int sensorIndex = 0; sensorIndex < NUMBER_OF_SENSORS; sensorIndex++)
+        {
             String currentSensorReading =
                     lineOfData[sensorIndex + FIRST_SENSOR_READING_POSITION];
             for (int readingValueIndex = 0; readingValueIndex < currentSensorReading.length();
-                 readingValueIndex++) {
-                if (Character.isLetter(currentSensorReading.charAt(readingValueIndex))) {
-                    logger.severe("Sensor reading is not a number");
+                 readingValueIndex++)
+            {
+                if (Character.isLetter(currentSensorReading.charAt(readingValueIndex)))
+                {
+                    LOGGER.severe("Sensor reading is not a number");
                     getNext();
                     return true;
                 }
@@ -378,13 +426,17 @@ public class SensorReadingsParser
      * Checks if any of the sensor readings match another reading.
      * @param sensorReadings The current sensor readings.
      */
-    private void checkMatching(int[] sensorReadings) {
-        for (int currentIndex = 0; currentIndex < NUMBER_OF_SENSORS - 1; currentIndex++) {
+    private void checkMatching(int[] sensorReadings)
+    {
+        for (int currentIndex = 0; currentIndex < NUMBER_OF_SENSORS - 1; currentIndex++)
+        {
             for (int checkingIndex = currentIndex + 1;
-                 checkingIndex < NUMBER_OF_SENSORS - currentIndex; checkingIndex++) {
-                if (sensorReadings[currentIndex] == sensorReadings[checkingIndex]) {
+                 checkingIndex < NUMBER_OF_SENSORS - currentIndex; checkingIndex++)
+            {
+                if (sensorReadings[currentIndex] == sensorReadings[checkingIndex])
+                {
                     String logMessage = "Sensor " + ++currentIndex + " and " + ++checkingIndex + " are matching";
-                    logger.info(logMessage);
+                    LOGGER.info(logMessage);
                 }
             }
         }
